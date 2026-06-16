@@ -1,0 +1,229 @@
+{
+  "site": {
+    "title": "Gennetten.org",
+    "tagline": "A hub for the Gennetten family's legacy, creativity, and community contributions",
+    "footer": "© 2026 Gennetten.org. All rights reserved."
+  },
+  "cards": [
+    {
+      "id": "memorial",
+      "title": "Gennetten Family Memorial",
+      "description": "A tribute to the enduring legacy and cherished memories of the Gennetten family.",
+      "url": "https://memorial.gennetten.org",
+      "icon": "heart",
+      "iconColor": "blue",
+      "badge": null,
+      "order": 0,
+      "published": true
+    },
+    {
+      "id": "directory",
+      "title": "Gennetten Extended Family Directory",
+      "description": "Connecting Generations, preserving memories, enabling community.",
+      "url": "https://directory.gennetten.org",
+      "icon": "notebook-tabs",
+      "iconColor": "blue",
+      "badge": "Password Protected",
+      "order": 1,
+      "published": true
+    },
+    {
+      "id": "douglas-creative",
+      "title": "Douglas Gennetten's Creative Pursuits",
+      "description": "Explore Douglas Gennetten's artistic and innovative projects.",
+      "url": "https://douglas.gennetten.com",
+      "icon": "palette",
+      "iconColor": "blue",
+      "badge": null,
+      "order": 2,
+      "published": true
+    },
+    {
+      "id": "darren-portfolio",
+      "title": "Darren Gennetten's Design Portfolio",
+      "description": "Discover Darren Gennetten's stunning design work and creative portfolio.",
+      "url": "https://darrengennetten.com",
+      "icon": "spline-pointer",
+      "iconColor": "blue",
+      "badge": null,
+      "order": 3,
+      "published": true
+    },
+    {
+      "id": "sundials",
+      "title": "Douglas' Precision Sundial Generator",
+      "description": "A passion since 1985, these computer generated sundials tell time with under 4 seconds error year-round. Now featured on bcgnomonics.com",
+      "url": "https://sundial.gennetten.org",
+      "icon": "sun",
+      "iconColor": "blue",
+      "badge": null,
+      "order": 4,
+      "published": true
+    },
+    {
+      "id": "trappers-point",
+      "title": "1234 Trappers Point, Fort Collins",
+      "description": "Beautiful Lakeside Home for Sale Soon",
+      "url": "https://trapperspoint.gennetten.org/",
+      "icon": "house",
+      "iconColor": "blue",
+      "badge": null,
+      "order": 5,
+      "published": true
+    },
+    {
+      "id": "linden-street",
+      "title": "251/253 Linden Street History",
+      "description": "Dive into the rich history of 251/253 Linden Street.",
+      "url": "https://lindenstreet.online",
+      "icon": "landmark",
+      "iconColor": "blue",
+      "badge": null,
+      "order": 6,
+      "published": true
+    },
+    {
+      "id": "trails",
+      "title": "Canyon Lakes Ranger District Trails",
+      "description": "A developing guide to the trails of Canyon Lakes Ranger District and a record of PWV.org patrols.",
+      "url": "https://trails.gennetten.org",
+      "icon": "mountain",
+      "iconColor": "blue",
+      "badge": "In Progress",
+      "order": 7,
+      "published": true
+    },
+    {
+      "id": "parks",
+      "title": "National Parks Explorer",
+      "description": "A simple tool to view the location of our National Parks",
+      "url": "https://parks.gennetten.org",
+      "icon": "trees",
+      "iconColor": "blue",
+      "badge": "In Progress",
+      "order": 8,
+      "published": true
+    },
+    {
+      "id": "trappers-hoa",
+      "title": "Trappers Point HOA",
+      "description": "Access resources and information for the Trappers Point Homeowners Association.",
+      "url": "https://trapperspointhoa.net",
+      "icon": "house",
+      "iconColor": "blue",
+      "badge": "Password Protected",
+      "order": 9,
+      "published": true
+    },
+    {
+      "id": "quantified-self",
+      "title": "Quantified Self Dashboard",
+      "description": "Aggregation of personal data from various sources, including Oura Ring; SmartMeter; Rivian; Weather; Home Automation.",
+      "url": "https://self.gennetten.org",
+      "icon": "chart-area",
+      "iconColor": "blue",
+      "badge": "Password Protected",
+      "order": 10,
+      "published": true
+    },
+    {
+      "id": "spirograph",
+      "title": "Spirograph Simulator",
+      "description": "Spirograph simulator which enables layer accumulation and SVG export.",
+      "url": "https://spirograph.gennetten.org",
+      "icon": "shell",
+      "iconColor": "blue",
+      "badge": null,
+      "order": 11,
+      "published": true
+    },
+    {
+      "id": "epicycle",
+      "title": "Fourier Epicycle Generator",
+      "description": "Generate complex Fourier Epicycle Animations.",
+      "url": "https://epicycle.gennetten.org",
+      "icon": "rotate-cw",
+      "iconColor": "blue",
+      "badge": null,
+      "order": 12,
+      "published": true
+    },
+    {
+      "id": "terra-cognita",
+      "title": "Terra Cognita",
+      "description": "Learn where all the countries are.",
+      "url": "https://terracognita.gennetten.org",
+      "icon": "earth",
+      "iconColor": "blue",
+      "badge": null,
+      "order": 13,
+      "published": true
+    },
+    {
+      "id": "atlas",
+      "title": "Atlas Hub",
+      "description": "Landon's Playground.",
+      "url": "https://atlas.gennetten.org",
+      "icon": "baby",
+      "iconColor": "blue",
+      "badge": null,
+      "order": 14,
+      "published": true
+    },
+    {
+      "id": "papabucks",
+      "title": "PapaBucks",
+      "description": "My new loan management system",
+      "url": "https://papabucks.gennetten.org",
+      "icon": "piggy-bank",
+      "iconColor": "green",
+      "badge": null,
+      "order": 15,
+      "published": true
+    },
+    {
+      "id": "thursday-pints",
+      "title": "Thursday Pints",
+      "description": "Thursday Pints Social Group Log",
+      "url": "https://thursdaypints.com",
+      "icon": "beer",
+      "iconColor": "orange",
+      "badge": null,
+      "order": 16,
+      "published": true
+    },
+    {
+      "id": "trolley",
+      "title": "Fort Collins Trolley (design)",
+      "description": "On going site design for future trolley portal",
+      "url": "https://fortcollinstrolley.gennetten.org",
+      "icon": "tram-front",
+      "iconColor": "green",
+      "badge": null,
+      "order": 17,
+      "published": true
+    },
+    {
+      "id": "pwv",
+      "title": "PWV Insights (beta)",
+      "description": "On going site design for future PWV portal",
+      "url": "https://pwv-insights.gennetten.org",
+      "icon": "mountain",
+      "iconColor": "green",
+      "badge": null,
+      "order": 18,
+      "published": true
+    },
+    {
+      "id": "icebox",
+      "title": "ICEBOX (design)",
+      "description": "Personal 'In Case of Emergency' app; Store vital info and shares with designated sterward upon death.",
+      "url": "https://icebox.gennetten.org",
+      "icon": "refrigerator",
+      "iconColor": "cyan",
+      "badge": null,
+      "order": 19,
+      "published": true
+    }
+  ]
+}
