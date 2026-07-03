@@ -53,6 +53,7 @@ export const POPULAR_ICONS = [
   'tram-front',
   'book-heart',
   'refrigerator',
+  'droplets',
   'globe',
   'camera',
   'music',

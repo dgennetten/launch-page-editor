@@ -1,0 +1,7 @@
+{
+  "host": "gennetten.org",
+  "user": "deploy",
+  "path": "/var/www/gennetten.org/html",
+  "port": 22,
+  "reloadNginx": true
+}

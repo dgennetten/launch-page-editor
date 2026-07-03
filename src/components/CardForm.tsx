@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Card, IconColor } from '../types/card'
 import { ICON_COLORS, POPULAR_ICONS } from '../types/card'
 import { getIcon } from '../lib/icons'
+import { sanitizeUrl } from '../lib/security'
 
 const BADGE_PRESETS = ['Password Protected', 'In Progress', 'Beta', 'Design'] as const
 
@@ -18,7 +19,12 @@ export function CardForm({ card, onSave, onCancel }: CardFormProps) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    onSave(draft)
+    const safeUrl = sanitizeUrl(draft.url)
+    if (!safeUrl) {
+      alert('URL must start with http:// or https://')
+      return
+    }
+    onSave({ ...draft, url: safeUrl })
   }
 
   return (

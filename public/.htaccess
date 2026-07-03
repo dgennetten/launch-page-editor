@@ -1,0 +1,75 @@
+# DreamHost shared hosting — Apache config for the launch-page SPA.
+# Vite copies this file into dist/ on build; upload dist/ to your domain folder.
+
+# ── HTTPS (DreamHost panel may already force this; safe to keep) ──────────────
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  RewriteCond %{HTTPS} !=on
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+</IfModule>
+
+# ── SPA routing: send unknown paths to index.html ─────────────────────────────
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>
+
+# ── Basics ────────────────────────────────────────────────────────────────────
+Options -Indexes
+DirectoryIndex index.html
+
+# ── Security headers ──────────────────────────────────────────────────────────
+<IfModule mod_headers.c>
+  Header always set X-Frame-Options "DENY"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+</IfModule>
+
+# ── Cache hashed build assets ─────────────────────────────────────────────────
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css "access plus 7 days"
+  ExpiresByType application/javascript "access plus 7 days"
+  ExpiresByType image/svg+xml "access plus 7 days"
+  ExpiresByType image/png "access plus 7 days"
+  ExpiresByType image/jpeg "access plus 7 days"
+  ExpiresByType image/gif "access plus 7 days"
+  ExpiresByType image/x-icon "access plus 7 days"
+</IfModule>
+
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|css|svg|png|jpe?g|gif|ico|woff2?)$">
+    Header set Cache-Control "public, max-age=604800, immutable"
+  </FilesMatch>
+</IfModule>
+
+# ── Block dotfiles if any slip into the web root ──────────────────────────────
+<FilesMatch "^\.">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+</FilesMatch>
+
+# ── Optional: Apache basic auth for /admin (stronger than app password alone) ─
+# 1. SSH in and run: htpasswd -c ~/.htpasswd-admin YOUR_USERNAME
+# 2. Uncomment the block below and replace YOUR_DREAMHOST_USERNAME
+#
+# <IfModule mod_setenvif.c>
+#   SetEnvIf Request_URI "^/admin" require_auth=1
+# </IfModule>
+# AuthType Basic
+# AuthName "Launch Page Admin"
+# AuthUserFile /home/YOUR_DREAMHOST_USERNAME/.htpasswd-admin
+# <RequireAny>
+#   Require valid-user
+#   Require not env require_auth
+# </RequireAny>

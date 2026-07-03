@@ -13,7 +13,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
-import { Download, Eye, Plus, RotateCcw, Upload } from 'lucide-react'
+import { Download, Eye, Plus, RotateCcw, Upload, CloudUpload } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CardForm, createEmptyCard } from '../components/CardForm'
@@ -21,13 +21,17 @@ import { EditorCardRow } from '../components/EditorCardRow'
 import { CardGrid } from '../components/CardGrid'
 import { SiteHeader } from '../components/SiteHeader'
 import { useSiteData } from '../hooks/useSiteData'
-import { exportSiteData, resetToDefault } from '../lib/storage'
+import { getSessionPassword } from '../lib/adminAuth'
+import { exportSiteData, publishSiteData } from '../lib/storage'
+import { isSafeUrl } from '../lib/security'
 import type { Card, SiteData } from '../types/card'
 
 export function EditorPage() {
-  const { data, update, replace } = useSiteData()
+  const { data, update, replace, reloadLive, loading } = useSiteData({ useDrafts: true })
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showPreview, setShowPreview] = useState(false)
+  const [publishing, setPublishing] = useState(false)
+  const [publishMessage, setPublishMessage] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const sortedCards = [...data.cards].sort((a, b) => a.order - b.order)
@@ -84,18 +88,67 @@ export function EditorPage() {
         if (!parsed.site || !Array.isArray(parsed.cards)) {
           throw new Error('Invalid format')
         }
+        const unsafeCard = parsed.cards.find((card) => !isSafeUrl(card.url))
+        if (unsafeCard) {
+          throw new Error(`Unsafe URL on card "${unsafeCard.title}"`)
+        }
         replace(parsed)
         setEditingId(null)
-      } catch {
-        alert('Could not parse cards.json — check the file format.')
+        setPublishMessage(null)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Invalid format'
+        alert(`Could not import cards.json — ${message}`)
       }
     })
   }
 
-  function handleReset() {
-    if (!confirm('Reset to the built-in default data? Unsaved local edits will be lost.')) return
-    replace(resetToDefault())
-    setEditingId(null)
+  async function handleReset() {
+    if (!confirm('Discard local drafts and reload the live site data?')) return
+    try {
+      await reloadLive()
+      setEditingId(null)
+      setPublishMessage(null)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Reload failed'
+      alert(message)
+    }
+  }
+
+  async function handlePublish() {
+    const password = getSessionPassword()
+    if (!password) {
+      alert('Admin password is not available. Sign in again, then publish.')
+      return
+    }
+
+    const unsafeCard = data.cards.find((card) => !isSafeUrl(card.url))
+    if (unsafeCard) {
+      alert(`Cannot publish — unsafe URL on card "${unsafeCard.title}"`)
+      return
+    }
+
+    if (!confirm('Publish these cards to the live site now?')) return
+
+    setPublishing(true)
+    setPublishMessage(null)
+    try {
+      await publishSiteData(data, password)
+      setPublishMessage('Published to the live site.')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Publish failed'
+      setPublishMessage(message)
+      alert(message)
+    } finally {
+      setPublishing(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-100 text-sm text-gray-500">
+        Loading…
+      </div>
+    )
   }
 
   return (
@@ -104,7 +157,7 @@ export function EditorPage() {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <div>
             <h1 className="text-lg font-bold text-gray-900">Launch Page Editor</h1>
-            <p className="text-xs text-gray-500">Edit cards, then export JSON and commit to Git</p>
+            <p className="text-xs text-gray-500">Edit cards, then publish to the live site</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
@@ -123,11 +176,20 @@ export function EditorPage() {
             </Link>
             <button
               type="button"
+              onClick={() => void handlePublish()}
+              disabled={publishing}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+            >
+              <CloudUpload className="h-4 w-4" />
+              {publishing ? 'Publishing…' : 'Publish'}
+            </button>
+            <button
+              type="button"
               onClick={() => exportSiteData(data)}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               <Download className="h-4 w-4" />
-              Export JSON
+              Export
             </button>
             <button
               type="button"
@@ -150,7 +212,7 @@ export function EditorPage() {
             />
             <button
               type="button"
-              onClick={handleReset}
+              onClick={() => void handleReset()}
               className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
             >
               <RotateCcw className="h-4 w-4" />
@@ -170,11 +232,23 @@ export function EditorPage() {
       )}
 
       <div className="mx-auto max-w-3xl px-4 py-6">
-        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Changes are saved to your browser automatically. Click <strong>Export JSON</strong>, replace{' '}
-          <code className="rounded bg-amber-100 px-1">src/data/cards.json</code>, then run{' '}
-          <code className="rounded bg-amber-100 px-1">npm run build</code> to publish.
+        <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+          Drafts save in this browser automatically. Click <strong>Publish</strong> to update{' '}
+          <code className="rounded bg-blue-100 px-1">/data/cards.json</code> on the live site.
+          Use <strong>Export</strong> if you also want a local backup for git.
         </div>
+
+        {publishMessage && (
+          <div
+            className={`mb-4 rounded-lg border px-4 py-3 text-sm ${
+              publishMessage.startsWith('Published')
+                ? 'border-green-200 bg-green-50 text-green-900'
+                : 'border-red-200 bg-red-50 text-red-900'
+            }`}
+          >
+            {publishMessage}
+          </div>
+        )}
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={sortedCards.map((c) => c.id)} strategy={verticalListSortingStrategy}>
