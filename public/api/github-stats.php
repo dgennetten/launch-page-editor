@@ -17,6 +17,20 @@ if (is_file($configPath)) {
 $token = getenv('GITHUB_TOKEN') ?: ($config['github_token'] ?? '');
 $owner = getenv('GITHUB_OWNER') ?: ($config['github_owner'] ?? '');
 
+// Aggregating code_frequency across every repo takes ~15-20s (one GitHub call
+// per repo), so cache the aggregated result to disk and serve it for a while.
+// This keeps the chart fast and avoids re-hitting the API on every page load.
+$cacheFile = dirname(__DIR__) . '/data/github-stats-cache.json';
+$cacheTtl = 6 * 3600;
+
+if (is_file($cacheFile) && time() - filemtime($cacheFile) < $cacheTtl) {
+    $cached = file_get_contents($cacheFile);
+    if ($cached !== false && $cached !== '') {
+        echo $cached;
+        exit;
+    }
+}
+
 function githubRequest(string $url, string $token): array {
     $headers = [
         'Accept: application/vnd.github+json',
@@ -141,4 +155,19 @@ $response = [
     'source' => $token !== '' ? 'private' : ($owner !== '' ? 'public' : 'none'),
 ];
 
-echo json_encode($response, JSON_UNESCAPED_SLASHES);
+$json = json_encode($response, JSON_UNESCAPED_SLASHES);
+
+// Only cache a result that actually has data, so a transient GitHub failure
+// doesn't poison the cache with zeros. If this run produced nothing, fall back
+// to any stale cached copy before giving up.
+if ($aggregation['repositories'] > 0) {
+    @file_put_contents($cacheFile, $json, LOCK_EX);
+} elseif (is_file($cacheFile)) {
+    $stale = file_get_contents($cacheFile);
+    if ($stale !== false && $stale !== '') {
+        echo $stale;
+        exit;
+    }
+}
+
+echo $json;
