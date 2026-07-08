@@ -3,7 +3,6 @@ import { CardGrid } from '../components/CardGrid'
 import { SiteFooter } from '../components/SiteFooter'
 import { SiteHeader } from '../components/SiteHeader'
 import { useSiteData } from '../hooks/useSiteData'
-import { isAdminAuthenticated, isAdminProtectionEnabled } from '../lib/adminAuth'
 
 export function LaunchPage() {
   const { data, loading, error } = useSiteData({ useDrafts: false })
@@ -34,14 +33,12 @@ export function LaunchPage() {
 
       <SiteFooter text={data.site.footer} />
 
-      {(!isAdminProtectionEnabled() || isAdminAuthenticated()) && (
-        <Link
-          to="/admin"
-          className="fixed bottom-4 right-4 rounded-full bg-gray-800/80 px-3 py-1.5 text-xs text-white/80 backdrop-blur hover:bg-gray-800 hover:text-white"
-        >
-          Edit
-        </Link>
-      )}
+      <Link
+        to="/admin"
+        className="fixed right-4 top-4 z-[70] rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-lg ring-1 ring-black/10 hover:bg-black"
+      >
+        Edit
+      </Link>
     </div>
   )
 }

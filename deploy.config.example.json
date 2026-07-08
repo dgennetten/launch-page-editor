@@ -1,7 +1,9 @@
 {
   "host": "gennetten.org",
-  "user": "deploy",
-  "path": "/var/www/gennetten.org/html",
+  "user": "dgennetten",
+  "path": "/home/dgennetten/gennetten.org",
   "port": 22,
-  "reloadNginx": true
+  "reloadNginx": false,
+  "githubToken": "",
+  "githubOwner": "dgennetten"
 }
