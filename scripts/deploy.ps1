@@ -42,6 +42,30 @@ function Require-Command {
     }
 }
 
+# Native commands don't trip $ErrorActionPreference; check their exit code so a
+# failed build or upload aborts instead of silently reporting success.
+function Assert-LastExit {
+    param([string]$What)
+    if ($LASTEXITCODE -ne 0) {
+        throw "$What failed (exit $LASTEXITCODE). Deploy aborted."
+    }
+}
+
+# Guard against a stale Node (e.g. an old nvm default shadowing the system one),
+# which crashes the Vite build partway through.
+function Assert-NodeVersion {
+    $version = (& node -v) 2>$null
+    if ($LASTEXITCODE -ne 0 -or -not $version) {
+        throw 'node was not found on PATH.'
+    }
+    $major = 0
+    if ($version -match '^v(\d+)\.') { $major = [int]$Matches[1] }
+    if ($major -lt 18) {
+        throw "Node $version is too old to build (need >= 18). If you use nvm, run 'nvm use' to select a modern Node before deploying."
+    }
+    Write-Host "Using Node $version"
+}
+
 $configPath = Join-Path $Root 'deploy.config.json'
 if (-not (Test-Path $configPath)) {
     throw "Missing deploy.config.json. Copy deploy.config.example.json and edit it."
@@ -71,6 +95,7 @@ $githubOwner = if ($env:GITHUB_OWNER) { $env:GITHUB_OWNER } else { $config.githu
 
 Require-Command ssh
 Require-Command scp
+Require-Command tar
 
 $sshTarget = "${user}@${hostName}"
 $sshArgs = @('-p', "$port")
@@ -83,11 +108,14 @@ if ($sshKey) {
 Write-Host "Deploy target: $sshTarget`:$remotePath"
 
 if (-not $SkipBuild) {
+    Assert-NodeVersion
     Write-Host 'Installing dependencies...'
     npm ci
+    Assert-LastExit 'npm ci'
     Write-Host 'Building production bundle...'
     $env:VITE_ADMIN_PASSWORD = $adminPassword
     npm run build
+    Assert-LastExit 'npm run build'
 }
 
 $dist = Join-Path $Root 'dist'
@@ -113,23 +141,44 @@ return [
 $utf8NoBom = New-Object System.Text.UTF8Encoding $false
 [System.IO.File]::WriteAllText((Join-Path $apiDir 'config.php'), $configPhp, $utf8NoBom)
 
+# Keep live data/cards.json if the editor has already published to it.
+$remoteCards = & ssh @sshArgs $sshTarget "if [ -f '$remotePath/data/cards.json' ]; then echo exists; fi"
+Assert-LastExit 'ssh (checking remote data/cards.json)'
+$preserveCards = $remoteCards -match 'exists'
+
+# Upload a tarball and extract it server-side. Windows scp does not expand
+# "dist/*" (it treats it as a literal path), so packaging is the reliable path;
+# it also carries dotfiles like .htaccess.
+$tarArgs = @('-C', $dist)
+if ($preserveCards) {
+    Write-Host 'Preserving live data/cards.json on server'
+    $tarArgs += '--exclude=./data/cards.json'
+}
+$tarball = Join-Path ([System.IO.Path]::GetTempPath()) "launch-deploy-$([System.Guid]::NewGuid().ToString('N')).tgz"
+$tarArgs += @('-czf', $tarball, '.')
+
 if ($DryRun) {
-    Write-Host '[dry-run] Would upload dist/* to' $remotePath
+    Write-Host "[dry-run] Would package dist/ and upload to ${sshTarget}:${remotePath}/"
     exit 0
 }
 
-# Keep live cards.json if the editor has already published.
-$remoteCards = & ssh @sshArgs $sshTarget "if [ -f '$remotePath/data/cards.json' ]; then echo exists; fi"
-$cardsFile = Join-Path $dist 'data\cards.json'
-$preserveCards = $remoteCards -match 'exists'
-if ($preserveCards -and (Test-Path $cardsFile)) {
-    Write-Host 'Preserving live data/cards.json on server'
-    Remove-Item $cardsFile -Force
-}
+Write-Host 'Packaging build output...'
+& tar @tarArgs
+Assert-LastExit 'tar (packaging dist)'
 
-Write-Host 'Uploading files...'
-& ssh @sshArgs $sshTarget "mkdir -p '$remotePath'"
-& scp @scpArgs (Join-Path $dist '*') "${sshTarget}:${remotePath}/"
+try {
+    Write-Host 'Uploading...'
+    & ssh @sshArgs $sshTarget "mkdir -p '$remotePath'"
+    Assert-LastExit 'ssh (mkdir remote path)'
+    & scp @scpArgs $tarball "${sshTarget}:${remotePath}/_deploy.tgz"
+    Assert-LastExit 'scp (upload archive)'
+    Write-Host 'Extracting on server...'
+    & ssh @sshArgs $sshTarget "cd '$remotePath' && tar -xzf _deploy.tgz && rm -f _deploy.tgz"
+    Assert-LastExit 'ssh (extract archive)'
+}
+finally {
+    Remove-Item $tarball -Force -ErrorAction SilentlyContinue
+}
 
 # scp creates dirs as 700; Apache needs world-readable assets on shared hosting.
 Write-Host 'Fixing permissions...'
