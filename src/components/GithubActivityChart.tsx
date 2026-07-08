@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 const fallbackWeeklyLinesAdded = [
   92, 102, 118, 97, 124, 132, 114, 140,
@@ -98,12 +98,28 @@ export function GithubActivityChart() {
     }
   }, [])
 
-  const width = 1040
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [width, setWidth] = useState(960)
   const height = 260
   const padding = 34
+
+  // Render the SVG at the container's actual width (1:1 pixels) instead of
+  // scaling a fixed 1040px viewBox down, which forced a min-width and sideways
+  // scroll on mobile and shrank the labels to nothing.
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const observer = new ResizeObserver((entries) => {
+      const measured = entries[0]?.contentRect.width
+      if (measured) setWidth(Math.round(measured))
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
   const { points, linePath, areaPath, yTicks } = useMemo(
     () => buildChart(weeklyLinesAdded, width, height, padding),
-    [weeklyLinesAdded],
+    [weeklyLinesAdded, width],
   )
   const average = Math.round(weeklyLinesAdded.reduce((sum, value) => sum + value, 0) / weeklyLinesAdded.length)
 
@@ -121,8 +137,8 @@ export function GithubActivityChart() {
           </div>
         </div>
 
-        <div className="overflow-x-auto px-4 py-5 sm:px-6">
-          <svg viewBox={`0 0 ${width} ${height}`} className="h-56 min-w-[960px] w-full">
+        <div ref={containerRef} className="px-4 py-5 sm:px-6">
+          <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height} className="block">
             <line x1={padding} x2={padding} y1={padding} y2={height - padding} stroke="rgba(15, 23, 42, 0.18)" />
             <line x1={padding} x2={width - padding} y1={height - padding} y2={height - padding} stroke="rgba(15, 23, 42, 0.18)" />
 
@@ -145,17 +161,29 @@ export function GithubActivityChart() {
             <path d={areaPath} fill="url(#activityFill)" />
             <path d={linePath} fill="none" stroke="#2563eb" strokeWidth="3.2" strokeLinecap="round" />
 
-            {points.map((point, index) => (
+            {width >= 560 &&
+              points.map((point, index) => (
+                <circle
+                  key={`${point.x}-${point.y}`}
+                  cx={point.x}
+                  cy={point.y}
+                  r={index === points.length - 1 ? 5 : 3.5}
+                  fill={index === points.length - 1 ? '#ffffff' : '#2563eb'}
+                  stroke="#1e293b"
+                  strokeWidth="1.5"
+                />
+              ))}
+
+            {points.length > 0 && (
               <circle
-                key={`${point.x}-${point.y}`}
-                cx={point.x}
-                cy={point.y}
-                r={index === points.length - 1 ? 5 : 3.5}
-                fill={index === points.length - 1 ? '#ffffff' : '#2563eb'}
+                cx={points[points.length - 1].x}
+                cy={points[points.length - 1].y}
+                r={5}
+                fill="#ffffff"
                 stroke="#1e293b"
                 strokeWidth="1.5"
               />
-            ))}
+            )}
 
             {points.filter((_, index) => index % 8 === 0).map((point, index) => (
               <g key={`${point.x}-label-${index}`}>
