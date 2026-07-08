@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom'
 import { CardGrid } from '../components/CardGrid'
 import { SiteFooter } from '../components/SiteFooter'
 import { SiteHeader } from '../components/SiteHeader'
@@ -32,13 +31,6 @@ export function LaunchPage() {
       </main>
 
       <SiteFooter text={data.site.footer} />
-
-      <Link
-        to="/admin"
-        className="fixed right-4 top-4 z-[70] rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-lg ring-1 ring-black/10 hover:bg-black"
-      >
-        Edit
-      </Link>
     </div>
   )
 }
