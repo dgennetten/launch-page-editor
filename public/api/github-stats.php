@@ -126,7 +126,10 @@ foreach ($repos as $repo) {
     if ($fullName === '') {
         continue;
     }
-    $statsResponse = githubStatsWithRetry('https://api.github.com/repos/' . rawurlencode($fullName) . '/stats/code_frequency', $token);
+    // Encode each path segment but keep the owner/repo slash — rawurlencode on
+    // the whole "owner/repo" turns the slash into %2F, which GitHub 404s.
+    $encodedName = implode('/', array_map('rawurlencode', explode('/', $fullName)));
+    $statsResponse = githubStatsWithRetry('https://api.github.com/repos/' . $encodedName . '/stats/code_frequency', $token);
     $statsResponses[] = $statsResponse;
 }
 
