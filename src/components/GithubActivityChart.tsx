@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { GithubContributionsHeatmap } from './GithubContributionsHeatmap'
 
 const fallbackWeeklyLinesAdded = [
   92, 102, 118, 97, 124, 132, 114, 140,
@@ -214,6 +215,8 @@ export function GithubActivityChart() {
             </defs>
           </svg>
         </div>
+
+        <GithubContributionsHeatmap />
       </div>
     </div>
   )

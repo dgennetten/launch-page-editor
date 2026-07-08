@@ -18,20 +18,26 @@ function githubStatsDevPlugin(): Plugin {
     name: 'dev-github-stats',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        if (!req.url || !req.url.split('?')[0].endsWith('/api/github-stats.php')) {
-          return next()
+        const path = req.url?.split('?')[0] ?? ''
+        let handler: (() => Promise<unknown>) | null = null
+        let empty: unknown = null
+        if (path.endsWith('/api/github-stats.php')) {
+          handler = handleGithubStats
+          empty = { values: [], repositories: 0, source: 'none' }
+        } else if (path.endsWith('/api/github-contributions.php')) {
+          handler = handleGithubContributions
+          empty = { weeks: [], total: 0, source: 'none' }
         }
-        void handleGithubStats()
-          .then((body) => {
-            res.setHeader('Content-Type', 'application/json; charset=utf-8')
-            res.setHeader('Cache-Control', 'no-store')
-            res.end(JSON.stringify(body))
-          })
-          .catch(() => {
-            res.setHeader('Content-Type', 'application/json; charset=utf-8')
-            res.statusCode = 200
-            res.end(JSON.stringify({ values: [], repositories: 0, source: 'none' }))
-          })
+        if (!handler) return next()
+
+        const send = (body: unknown) => {
+          res.setHeader('Content-Type', 'application/json; charset=utf-8')
+          res.setHeader('Cache-Control', 'no-store')
+          res.end(JSON.stringify(body))
+        }
+        void handler()
+          .then(send)
+          .catch(() => send(empty))
       })
     },
   }
@@ -144,6 +150,74 @@ async function handleGithubStats() {
     values,
     repositories,
     source: token ? 'private' : owner ? 'public' : 'none',
+  }
+}
+
+async function handleGithubContributions() {
+  const config = readDeployConfig()
+  const token = process.env.GITHUB_TOKEN || config.githubToken || ''
+  const owner = process.env.GITHUB_OWNER || config.githubOwner || ''
+  const source = token ? (owner ? 'public' : 'viewer') : 'none'
+  const empty = { weeks: [], total: 0, source }
+  if (!token) return empty
+
+  const fields =
+    'contributionsCollection{contributionCalendar{totalContributions weeks{contributionDays{date contributionCount contributionLevel weekday}}}}'
+  const query = owner ? `query($login:String!){user(login:$login){${fields}}}` : `query{viewer{${fields}}}`
+  const variables = owner ? { login: owner } : {}
+
+  try {
+    const res = await fetch('https://api.github.com/graphql', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'launch-page-editor',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ query, variables }),
+    })
+    const json = (await res.json()) as {
+      data?: { user?: CalendarHolder; viewer?: CalendarHolder }
+    }
+    const calendar =
+      json?.data?.user?.contributionsCollection?.contributionCalendar ??
+      json?.data?.viewer?.contributionsCollection?.contributionCalendar
+    if (!calendar?.weeks) return empty
+
+    const levelMap: Record<string, number> = {
+      NONE: 0,
+      FIRST_QUARTILE: 1,
+      SECOND_QUARTILE: 2,
+      THIRD_QUARTILE: 3,
+      FOURTH_QUARTILE: 4,
+    }
+    const weeks = calendar.weeks.map((week) =>
+      week.contributionDays.map((day) => ({
+        date: day.date,
+        count: day.contributionCount,
+        level: levelMap[day.contributionLevel] ?? 0,
+        weekday: day.weekday,
+      })),
+    )
+    return { weeks, total: calendar.totalContributions ?? 0, source }
+  } catch {
+    return empty
+  }
+}
+
+type CalendarHolder = {
+  contributionsCollection?: {
+    contributionCalendar?: {
+      totalContributions?: number
+      weeks?: {
+        contributionDays: {
+          date: string
+          contributionCount: number
+          contributionLevel: string
+          weekday: number
+        }[]
+      }[]
+    }
   }
 }
 
