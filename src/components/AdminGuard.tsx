@@ -14,6 +14,7 @@ interface AdminGuardProps {
 export function AdminGuard({ children }: AdminGuardProps) {
   const [authenticated, setAuthenticated] = useState(isAdminAuthenticated)
   const [password, setPassword] = useState('')
+  const [remember, setRemember] = useState(false)
   const [error, setError] = useState('')
 
   if (!isAdminProtectionEnabled() && import.meta.env.PROD) {
@@ -36,7 +37,7 @@ export function AdminGuard({ children }: AdminGuardProps) {
   if (!authenticated) {
     function handleSubmit(e: FormEvent) {
       e.preventDefault()
-      if (verifyAdminPassword(password)) {
+      if (verifyAdminPassword(password, remember)) {
         setAuthenticated(true)
         setError('')
         setPassword('')
@@ -66,6 +67,15 @@ export function AdminGuard({ children }: AdminGuardProps) {
             />
           </label>
           {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+          <label className="mt-3 flex items-center gap-2 text-sm text-gray-600">
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            Remember this device
+          </label>
           <div className="mt-4 flex items-center justify-between gap-3">
             <Link to="/" className="text-sm text-gray-600 hover:text-gray-900">
               Cancel

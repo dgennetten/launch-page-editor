@@ -45,7 +45,9 @@ function fallback(string $cacheFile, array $empty): string {
 }
 
 if ($token === '') {
-    echo json_encode($empty, JSON_UNESCAPED_SLASHES);
+    // Still serve a stale cache if we have one — a deploy that wiped
+    // github_token from config.php should not blank the heatmap.
+    echo fallback($cacheFile, $empty);
     exit;
 }
 

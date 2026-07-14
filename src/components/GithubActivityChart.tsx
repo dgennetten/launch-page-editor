@@ -11,7 +11,8 @@ const fallbackWeeklyLinesAdded = [
   438, 468, 481, 462, 495,
 ]
 
-const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const WEEK_SECONDS = 7 * 86400
 
 const SAMPLE_STATUS = 'Showing sample data — add a GitHub token for live activity'
 
@@ -19,6 +20,35 @@ function formatCompact(value: number): string {
   if (value >= 1_000_000) return `${value % 1_000_000 === 0 ? value / 1_000_000 : (value / 1_000_000).toFixed(1)}M`
   if (value >= 1_000) return `${value % 1_000 === 0 ? value / 1_000 : (value / 1_000).toFixed(1)}K`
   return String(value)
+}
+
+/** Sunday UTC start of the week containing `date`, matching GitHub's week buckets. */
+function githubWeekStartUnix(date = new Date()): number {
+  const day = date.getUTCDay()
+  return Math.floor(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() - day) / 1000)
+}
+
+function buildMonthTicks(
+  weekCount: number,
+  endUnix: number,
+  width: number,
+  padding: number,
+): Array<{ x: number; label: string; weekIndex: number }> {
+  if (weekCount <= 0) return []
+  const chartWidth = width - padding * 2
+  const stepX = chartWidth / Math.max(weekCount - 1, 1)
+  const ticks: Array<{ x: number; label: string; weekIndex: number }> = []
+  let lastMonth = -1
+
+  for (let i = 0; i < weekCount; i++) {
+    const ts = endUnix - (weekCount - 1 - i) * WEEK_SECONDS
+    const month = new Date(ts * 1000).getUTCMonth()
+    if (month === lastMonth) continue
+    ticks.push({ x: padding + i * stepX, label: MONTHS[month], weekIndex: i })
+    lastMonth = month
+  }
+
+  return ticks
 }
 
 function buildChart(values: number[], width: number, height: number, padding: number) {
@@ -56,6 +86,7 @@ function buildChart(values: number[], width: number, height: number, padding: nu
 
 export function GithubActivityChart() {
   const [weeklyLinesAdded, setWeeklyLinesAdded] = useState<number[]>(fallbackWeeklyLinesAdded)
+  const [weekEndUnix, setWeekEndUnix] = useState(() => githubWeekStartUnix())
   const [status, setStatus] = useState(SAMPLE_STATUS)
   const [hasRealData, setHasRealData] = useState(false)
 
@@ -77,17 +108,21 @@ export function GithubActivityChart() {
           setWeeklyLinesAdded(serverValues.map((value: number | string) => Number(value) || 0))
           setHasRealData(true)
           setStatus(serverData?.source === 'private' ? 'Using private GitHub activity' : 'Using public GitHub activity')
+          const end = Number(serverData?.end)
+          setWeekEndUnix(end > 0 ? end : githubWeekStartUnix())
           return
         }
 
         setWeeklyLinesAdded(fallbackWeeklyLinesAdded)
         setHasRealData(false)
         setStatus(SAMPLE_STATUS)
+        setWeekEndUnix(githubWeekStartUnix())
       } catch {
         if (isMounted) {
           setWeeklyLinesAdded(fallbackWeeklyLinesAdded)
           setHasRealData(false)
           setStatus(SAMPLE_STATUS)
+          setWeekEndUnix(githubWeekStartUnix())
         }
       }
     }
@@ -121,6 +156,10 @@ export function GithubActivityChart() {
   const { points, linePath, areaPath, yTicks } = useMemo(
     () => buildChart(weeklyLinesAdded, width, height, padding),
     [weeklyLinesAdded, width],
+  )
+  const monthTicks = useMemo(
+    () => buildMonthTicks(weeklyLinesAdded.length, weekEndUnix, width, padding),
+    [weeklyLinesAdded.length, weekEndUnix, width],
   )
   const average = Math.round(weeklyLinesAdded.reduce((sum, value) => sum + value, 0) / weeklyLinesAdded.length)
 
@@ -186,25 +225,13 @@ export function GithubActivityChart() {
               />
             )}
 
-            {points.filter((_, index) => index % 8 === 0).map((point, index) => (
-              <g key={`${point.x}-label-${index}`}>
-                <line x1={point.x} x2={point.x} y1={height - padding} y2={height - padding + 8} stroke="rgba(15, 23, 42, 0.25)" />
-                <text x={point.x} y={height - padding + 24} textAnchor="middle" fill="rgba(51, 65, 85, 0.8)" fontSize="12">
-                  {months[(index * 2) % months.length]}
+            {monthTicks.map((tick) => (
+              <g key={`${tick.label}-${tick.weekIndex}`}>
+                <line x1={tick.x} x2={tick.x} y1={height - padding} y2={height - padding + 8} stroke="rgba(15, 23, 42, 0.25)" />
+                <text x={tick.x} y={height - padding + 24} textAnchor="middle" fill="rgba(51, 65, 85, 0.8)" fontSize="12">
+                  {tick.label}
                 </text>
               </g>
-            ))}
-
-            {points.filter((_, index) => index % 8 === 0).map((point, index) => (
-              <circle
-                key={`${point.x}-node-${index}`}
-                cx={point.x}
-                cy={point.y}
-                r="4"
-                fill="#ffffff"
-                stroke="#2563eb"
-                strokeWidth="2"
-              />
             ))}
 
             <defs>

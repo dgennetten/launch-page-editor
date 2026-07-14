@@ -10,6 +10,16 @@ function sessionToken(password: string): string {
   return btoa(`admin:${password}`)
 }
 
+/** Read a key from either persistent (remembered device) or session storage. */
+function readStored(key: string): string | null {
+  return localStorage.getItem(key) ?? sessionStorage.getItem(key)
+}
+
+function clearStored(key: string): void {
+  localStorage.removeItem(key)
+  sessionStorage.removeItem(key)
+}
+
 export function isAdminProtectionEnabled(): boolean {
   return adminPassword() !== undefined
 }
@@ -17,14 +27,16 @@ export function isAdminProtectionEnabled(): boolean {
 export function isAdminAuthenticated(): boolean {
   const password = adminPassword()
   if (!password) return import.meta.env.DEV
-  return sessionStorage.getItem(SESSION_KEY) === sessionToken(password)
+  return readStored(SESSION_KEY) === sessionToken(password)
 }
 
-export function verifyAdminPassword(candidate: string): boolean {
+export function verifyAdminPassword(candidate: string, remember = false): boolean {
+  const store = remember ? localStorage : sessionStorage
+
   const password = adminPassword()
   if (!password) {
     if (import.meta.env.DEV) {
-      sessionStorage.setItem(PASSWORD_KEY, candidate)
+      store.setItem(PASSWORD_KEY, candidate)
       return true
     }
     return false
@@ -32,20 +44,23 @@ export function verifyAdminPassword(candidate: string): boolean {
 
   const valid = candidate === password
   if (valid) {
-    sessionStorage.setItem(SESSION_KEY, sessionToken(password))
-    sessionStorage.setItem(PASSWORD_KEY, password)
+    // Clear any prior credentials so we don't leave a stale copy in the other store.
+    clearStored(SESSION_KEY)
+    clearStored(PASSWORD_KEY)
+    store.setItem(SESSION_KEY, sessionToken(password))
+    store.setItem(PASSWORD_KEY, password)
   }
   return valid
 }
 
 /** Password from the current admin session, used for publish. */
 export function getSessionPassword(): string | undefined {
-  const stored = sessionStorage.getItem(PASSWORD_KEY)
+  const stored = readStored(PASSWORD_KEY)
   if (stored) return stored
   return adminPassword()
 }
 
 export function clearAdminSession(): void {
-  sessionStorage.removeItem(SESSION_KEY)
-  sessionStorage.removeItem(PASSWORD_KEY)
+  clearStored(SESSION_KEY)
+  clearStored(PASSWORD_KEY)
 }

@@ -107,6 +107,35 @@ if ($sshKey) {
 
 Write-Host "Deploy target: $sshTarget`:$remotePath"
 
+# A deploy with empty githubToken used to overwrite a working remote config.php and
+# silently kill the contributions heatmap (LOC chart can keep serving from cache).
+# If local credentials are missing, reuse whatever is already on the server.
+if ([string]::IsNullOrWhiteSpace($githubToken) -or [string]::IsNullOrWhiteSpace($githubOwner)) {
+    Write-Host 'Local githubToken/githubOwner missing — checking remote api/config.php...'
+    $remoteConfigPath = ($remotePath.TrimEnd('/') + '/api/config.php') -replace "'", "\\'"
+    $php = "`$c=@include '$remoteConfigPath'; if(is_array(`$c)){echo (`$c['github_token']??'').chr(10).(`$c['github_owner']??'');}"
+    # Remote shells often spam stderr (nvm/node noise); don't let that abort deploy.
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    $remoteCreds = & ssh @sshArgs $sshTarget "php -r `"$php`"" 2>$null
+    $remoteOk = $LASTEXITCODE -eq 0
+    $ErrorActionPreference = $prevEap
+    if ($remoteOk -and $remoteCreds) {
+        $lines = @($remoteCreds -split "`n" | ForEach-Object { $_.TrimEnd("`r") })
+        if ([string]::IsNullOrWhiteSpace($githubToken) -and $lines.Count -ge 1 -and $lines[0]) {
+            $githubToken = $lines[0]
+            Write-Host 'Preserved remote github_token'
+        }
+        if ([string]::IsNullOrWhiteSpace($githubOwner) -and $lines.Count -ge 2 -and $lines[1]) {
+            $githubOwner = $lines[1]
+            Write-Host "Preserved remote github_owner ($githubOwner)"
+        }
+    }
+    if ([string]::IsNullOrWhiteSpace($githubToken)) {
+        Write-Warning 'No GitHub token locally or on the server. Activity charts will have no live data until you set githubToken in deploy.config.json (or GITHUB_TOKEN) and redeploy.'
+    }
+}
+
 if (-not $SkipBuild) {
     Assert-NodeVersion
     Write-Host 'Installing dependencies...'

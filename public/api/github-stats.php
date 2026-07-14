@@ -26,8 +26,14 @@ $cacheTtl = 6 * 3600;
 if (is_file($cacheFile) && time() - filemtime($cacheFile) < $cacheTtl) {
     $cached = file_get_contents($cacheFile);
     if ($cached !== false && $cached !== '') {
-        echo $cached;
-        exit;
+        $cachedData = json_decode($cached, true);
+        $cacheSource = is_array($cachedData) ? ($cachedData['source'] ?? '') : '';
+        // A no-token deploy can poison the cache with public-only data. If we
+        // now have a token, skip that cache and rebuild with private repos.
+        if (!($token !== '' && $cacheSource === 'public')) {
+            echo $cached;
+            exit;
+        }
     }
 }
 
@@ -84,7 +90,10 @@ function githubStatsWithRetry(string $url, string $token): array {
 }
 
 function aggregateWeeklyAdditions(array $statsResponses): array {
-    $weekly = array_fill(0, 52, 0);
+    // Align by week timestamp, not array index. Repos with <52 weeks of history
+    // would otherwise left-pad into the start of the chart and leave recent
+    // weeks looking empty.
+    $byWeek = [];
     $repoCount = 0;
 
     foreach ($statsResponses as $response) {
@@ -98,18 +107,31 @@ function aggregateWeeklyAdditions(array $statsResponses): array {
         }
 
         $repoCount++;
-        $entries = array_values($data);
-        $slice = array_slice($entries, -52);
-
-        foreach ($slice as $index => $entry) {
+        foreach ($data as $entry) {
             if (!is_array($entry) || count($entry) < 2) {
                 continue;
             }
-            $weekly[$index] += (int) ($entry[1] ?? 0);
+            $ts = (int) ($entry[0] ?? 0);
+            if ($ts <= 0) {
+                continue;
+            }
+            $byWeek[$ts] = ($byWeek[$ts] ?? 0) + (int) ($entry[1] ?? 0);
         }
     }
 
-    return ['values' => $weekly, 'repositories' => $repoCount];
+    if ($repoCount === 0 || empty($byWeek)) {
+        return ['values' => array_fill(0, 52, 0), 'repositories' => $repoCount, 'end' => 0];
+    }
+
+    $latest = max(array_keys($byWeek));
+    $weekSeconds = 7 * 86400;
+    $weekly = [];
+    for ($i = 51; $i >= 0; $i--) {
+        $ts = $latest - ($i * $weekSeconds);
+        $weekly[] = $byWeek[$ts] ?? 0;
+    }
+
+    return ['values' => $weekly, 'repositories' => $repoCount, 'end' => $latest];
 }
 
 $repos = [];
@@ -152,6 +174,7 @@ $aggregation = aggregateWeeklyAdditions($statsResponses);
 $response = [
     'values' => $aggregation['values'],
     'repositories' => $aggregation['repositories'],
+    'end' => $aggregation['end'] ?? 0,
     'source' => $token !== '' ? 'private' : ($owner !== '' ? 'public' : 'none'),
 ];
 

@@ -85,8 +85,14 @@ async function githubStatsWithRetry(url: string, token: string): Promise<GithubR
   return githubRequest(url, token)
 }
 
-function aggregateWeeklyAdditions(responses: GithubResponse[]): { values: number[]; repositories: number } {
-  const weekly = new Array<number>(52).fill(0)
+function aggregateWeeklyAdditions(responses: GithubResponse[]): {
+  values: number[]
+  repositories: number
+  end: number
+} {
+  // Align by week timestamp, not array index — short histories must map to the
+  // trailing weeks of the chart, not the leading ones.
+  const byWeek = new Map<number, number>()
   let repositories = 0
 
   for (const response of responses) {
@@ -100,15 +106,26 @@ function aggregateWeeklyAdditions(responses: GithubResponse[]): { values: number
     if (!Array.isArray(data)) continue
 
     repositories++
-    const slice = data.slice(-52)
-    slice.forEach((entry, index) => {
-      if (Array.isArray(entry) && entry.length >= 2) {
-        weekly[index] += Number(entry[1]) || 0
-      }
-    })
+    for (const entry of data) {
+      if (!Array.isArray(entry) || entry.length < 2) continue
+      const ts = Number(entry[0]) || 0
+      if (ts <= 0) continue
+      byWeek.set(ts, (byWeek.get(ts) || 0) + (Number(entry[1]) || 0))
+    }
   }
 
-  return { values: weekly, repositories }
+  if (repositories === 0 || byWeek.size === 0) {
+    return { values: new Array<number>(52).fill(0), repositories, end: 0 }
+  }
+
+  const latest = Math.max(...byWeek.keys())
+  const weekSeconds = 7 * 86400
+  const weekly = Array.from({ length: 52 }, (_, index) => {
+    const ts = latest - (51 - index) * weekSeconds
+    return byWeek.get(ts) || 0
+  })
+
+  return { values: weekly, repositories, end: latest }
 }
 
 async function handleGithubStats() {
@@ -145,10 +162,11 @@ async function handleGithubStats() {
     }
   }
 
-  const { values, repositories } = aggregateWeeklyAdditions(statsResponses)
+  const { values, repositories, end } = aggregateWeeklyAdditions(statsResponses)
   return {
     values,
     repositories,
+    end,
     source: token ? 'private' : owner ? 'public' : 'none',
   }
 }
