@@ -31,6 +31,7 @@ import {
   Compass,
   Calendar,
   Mail,
+  CirclePlus,
 } from 'lucide-react'
 
 const iconMap: Record<string, LucideIcon> = {
@@ -65,6 +66,7 @@ const iconMap: Record<string, LucideIcon> = {
   compass: Compass,
   calendar: Calendar,
   mail: Mail,
+  'circle-plus': CirclePlus,
 }
 
 export function getIcon(name: string): LucideIcon {

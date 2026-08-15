@@ -65,4 +65,5 @@ export const POPULAR_ICONS = [
   'compass',
   'calendar',
   'mail',
+  'circle-plus',
 ] as const
