@@ -1,5 +1,6 @@
 import {
   type LucideIcon,
+  Activity,
   Baby,
   Beer,
   BookHeart,
@@ -36,6 +37,7 @@ import {
 } from 'lucide-react'
 
 const iconMap: Record<string, LucideIcon> = {
+  activity: Activity,
   heart: Heart,
   'notebook-tabs': NotebookTabs,
   palette: Palette,
