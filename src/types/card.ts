@@ -39,6 +39,7 @@ export const POPULAR_ICONS = [
   'palette',
   'spline-pointer',
   'pen-tool',
+  'activity',
   'sun',
   'house',
   'landmark',
