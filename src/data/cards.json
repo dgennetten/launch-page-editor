@@ -50,6 +50,17 @@
       "published": true
     },
     {
+      "id": "gennetteninc",
+      "title": "Gennetten Inc.",
+      "description": "Art direction and graphic design studio.",
+      "url": "https://gennetteninc.com",
+      "icon": "pen-tool",
+      "iconColor": "amber",
+      "badge": null,
+      "order": 4,
+      "published": true
+    },
+    {
       "id": "sundials",
       "title": "Douglas' Precision Sundial Generator",
       "description": "A passion since 1985, these computer generated sundials tell time with under 4 seconds error year-round. Now featured on bcgnomonics.com",
@@ -57,7 +68,7 @@
       "icon": "sun",
       "iconColor": "blue",
       "badge": null,
-      "order": 4,
+      "order": 5,
       "published": true
     },
     {
@@ -68,7 +79,7 @@
       "icon": "house",
       "iconColor": "blue",
       "badge": null,
-      "order": 5,
+      "order": 6,
       "published": true
     },
     {
@@ -79,7 +90,7 @@
       "icon": "landmark",
       "iconColor": "blue",
       "badge": null,
-      "order": 6,
+      "order": 7,
       "published": true
     },
     {
@@ -90,7 +101,7 @@
       "icon": "mountain",
       "iconColor": "blue",
       "badge": "In Progress",
-      "order": 7,
+      "order": 8,
       "published": true
     },
     {
@@ -101,7 +112,7 @@
       "icon": "trees",
       "iconColor": "blue",
       "badge": "In Progress",
-      "order": 8,
+      "order": 9,
       "published": true
     },
     {
@@ -112,7 +123,7 @@
       "icon": "house",
       "iconColor": "blue",
       "badge": "Password Protected",
-      "order": 9,
+      "order": 10,
       "published": true
     },
     {
@@ -123,7 +134,7 @@
       "icon": "droplets",
       "iconColor": "cyan",
       "badge": null,
-      "order": 10,
+      "order": 11,
       "published": true
     },
     {
@@ -134,7 +145,7 @@
       "icon": "chart-area",
       "iconColor": "blue",
       "badge": "Password Protected",
-      "order": 11,
+      "order": 12,
       "published": true
     },
     {
@@ -145,7 +156,7 @@
       "icon": "shell",
       "iconColor": "blue",
       "badge": null,
-      "order": 12,
+      "order": 13,
       "published": true
     },
     {
@@ -156,7 +167,7 @@
       "icon": "rotate-cw",
       "iconColor": "blue",
       "badge": null,
-      "order": 13,
+      "order": 14,
       "published": true
     },
     {
@@ -167,7 +178,7 @@
       "icon": "earth",
       "iconColor": "blue",
       "badge": null,
-      "order": 14,
+      "order": 15,
       "published": true
     },
     {
@@ -178,7 +189,7 @@
       "icon": "baby",
       "iconColor": "blue",
       "badge": null,
-      "order": 15,
+      "order": 16,
       "published": true
     },
     {
@@ -189,7 +200,7 @@
       "icon": "piggy-bank",
       "iconColor": "green",
       "badge": null,
-      "order": 16,
+      "order": 17,
       "published": true
     },
     {
@@ -200,7 +211,7 @@
       "icon": "beer",
       "iconColor": "orange",
       "badge": null,
-      "order": 17,
+      "order": 18,
       "published": true
     },
     {
@@ -211,7 +222,7 @@
       "icon": "tram-front",
       "iconColor": "green",
       "badge": null,
-      "order": 18,
+      "order": 19,
       "published": true
     },
     {
@@ -222,7 +233,7 @@
       "icon": "mountain",
       "iconColor": "green",
       "badge": null,
-      "order": 19,
+      "order": 20,
       "published": true
     },
     {
@@ -233,7 +244,7 @@
       "icon": "refrigerator",
       "iconColor": "cyan",
       "badge": null,
-      "order": 20,
+      "order": 21,
       "published": true
     }
   ]
