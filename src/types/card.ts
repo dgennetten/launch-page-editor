@@ -38,6 +38,7 @@ export const POPULAR_ICONS = [
   'notebook-tabs',
   'palette',
   'spline-pointer',
+  'pen-tool',
   'sun',
   'house',
   'landmark',
