@@ -89,6 +89,7 @@ export function GithubActivityChart() {
   const [weekEndUnix, setWeekEndUnix] = useState(() => githubWeekStartUnix())
   const [status, setStatus] = useState(SAMPLE_STATUS)
   const [hasRealData, setHasRealData] = useState(false)
+  const [isStale, setIsStale] = useState(false)
 
   useEffect(() => {
     let isMounted = true
@@ -107,7 +108,25 @@ export function GithubActivityChart() {
         if (serverValues && serverValues.some((value: number | string) => Number(value) > 0)) {
           setWeeklyLinesAdded(serverValues.map((value: number | string) => Number(value) || 0))
           setHasRealData(true)
-          setStatus(serverData?.source === 'private' ? 'Using private GitHub activity' : 'Using public GitHub activity')
+          setIsStale(serverData?.stale === true)
+          
+          let statusText = serverData?.source === 'private' ? 'Using private GitHub activity' : 'Using public GitHub activity'
+          if (serverData?.source === 'error') {
+            statusText = 'Authentication failed — showing cached data'
+          } else if (serverData?.stale === true) {
+            const reason = serverData?.stale_reason
+            if (reason === 'auth_failed') {
+              statusText = 'GitHub authentication failed — showing cached data'
+            } else if (reason === 'low_success_rate') {
+              statusText = 'Partial GitHub data available — showing cached data'
+            } else if (reason === 'source_downgrade') {
+              statusText = 'Token missing — showing cached private data'
+            } else {
+              statusText += ' (cached)'
+            }
+          }
+          
+          setStatus(statusText)
           const end = Number(serverData?.end)
           setWeekEndUnix(end > 0 ? end : githubWeekStartUnix())
           return
@@ -115,12 +134,14 @@ export function GithubActivityChart() {
 
         setWeeklyLinesAdded(fallbackWeeklyLinesAdded)
         setHasRealData(false)
+        setIsStale(false)
         setStatus(SAMPLE_STATUS)
         setWeekEndUnix(githubWeekStartUnix())
       } catch {
         if (isMounted) {
           setWeeklyLinesAdded(fallbackWeeklyLinesAdded)
           setHasRealData(false)
+          setIsStale(false)
           setStatus(SAMPLE_STATUS)
           setWeekEndUnix(githubWeekStartUnix())
         }
@@ -170,7 +191,10 @@ export function GithubActivityChart() {
           <div>
             <p className="text-sm font-semibold tracking-wide text-slate-800">GitHub activity</p>
             <p className="text-xs text-slate-500">Lines added per week over the last year (log scale)</p>
-            <p className="text-[11px] text-slate-400">{status}</p>
+            <p className={`text-[11px] ${isStale ? 'text-amber-600' : 'text-slate-400'}`}>
+              {status}
+              {isStale && ' ⚠️'}
+            </p>
           </div>
           <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
             {hasRealData ? `Avg ${average.toLocaleString()} lines/week` : 'Sample data'}

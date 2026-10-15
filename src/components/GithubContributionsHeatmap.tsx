@@ -14,6 +14,8 @@ const DAY_LABELS: Array<[number, string]> = [
 
 export function GithubContributionsHeatmap() {
   const [data, setData] = useState<ContributionsData | null>(null)
+  const [isStale, setIsStale] = useState(false)
+  const [staleInfo, setStaleInfo] = useState<string>('')
   const containerRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(720)
 
@@ -21,8 +23,31 @@ export function GithubContributionsHeatmap() {
     let mounted = true
     fetch('/api/github-contributions.php')
       .then((r) => r.json())
-      .then((d: ContributionsData) => {
-        if (mounted && Array.isArray(d?.weeks) && d.weeks.length > 0) setData(d)
+      .then((d: ContributionsData & { stale?: boolean; stale_reason?: string; cache_age_seconds?: number; cached_at?: number }) => {
+        if (mounted && Array.isArray(d?.weeks) && d.weeks.length > 0) {
+          setData(d)
+          setIsStale(d.stale === true)
+          
+          if (d.stale === true) {
+            const ageSeconds = d.cache_age_seconds || 0
+            const ageDays = Math.floor(ageSeconds / 86400)
+            const ageHours = Math.floor((ageSeconds % 86400) / 3600)
+            
+            let ageText = ''
+            if (ageDays > 0) {
+              ageText = `${ageDays} day${ageDays === 1 ? '' : 's'} old`
+            } else if (ageHours > 0) {
+              ageText = `${ageHours} hour${ageHours === 1 ? '' : 's'} old`
+            } else {
+              ageText = 'recently cached'
+            }
+            
+            const reason = d.stale_reason || 'unknown'
+            setStaleInfo(`Data is ${ageText} (${reason === 'no_token' ? 'no token' : reason === 'auth_failed' ? 'auth failed' : 'cached'})`)
+          } else {
+            setStaleInfo('')
+          }
+        }
       })
       .catch(() => {})
     return () => {
@@ -73,9 +98,16 @@ export function GithubContributionsHeatmap() {
 
   return (
     <div className="border-t border-slate-200 px-4 py-4 sm:px-6">
-      <p className="mb-2 text-xs font-medium text-slate-600">
-        {data.total.toLocaleString()} contributions in the last year
-      </p>
+      <div className="mb-2 flex items-baseline justify-between">
+        <p className="text-xs font-medium text-slate-600">
+          {data.total.toLocaleString()} contributions in the last year
+        </p>
+        {isStale && staleInfo && (
+          <p className="text-[10px] text-amber-600">
+            {staleInfo} ⚠️
+          </p>
+        )}
+      </div>
       <div ref={containerRef}>
         <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height} className="block">
           {monthLabels.map((month, index) => (

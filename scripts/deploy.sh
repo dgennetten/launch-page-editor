@@ -52,6 +52,25 @@ fi
 GITHUB_TOKEN="${GITHUB_TOKEN:-$(node -pe "require('./deploy.config.json').githubToken || ''")}" 
 GITHUB_OWNER="${GITHUB_OWNER:-$(node -pe "require('./deploy.config.json').githubOwner || ''")}" 
 
+if [[ -z "$GITHUB_TOKEN" || -z "$GITHUB_OWNER" ]]; then
+  cat >&2 <<EOF
+GitHub credentials missing in deploy.config.json (or GITHUB_TOKEN/GITHUB_OWNER env).
+
+The activity charts require a GitHub token. Create one at:
+  https://github.com/settings/tokens
+
+For a classic token, grant: repo, read:user
+For a fine-grained token, grant read-only: Contents, Metadata
+
+Add it to deploy.config.json as:
+  "githubToken": "ghp_...",
+  "githubOwner": "your-username"
+
+Deploy aborted.
+EOF
+  exit 1
+fi
+
 command -v rsync >/dev/null || { echo "rsync is required." >&2; exit 1; }
 command -v ssh >/dev/null || { echo "ssh is required." >&2; exit 1; }
 
@@ -64,28 +83,6 @@ fi
 
 TARGET="${USER}@${HOST}"
 echo "Deploy target: ${TARGET}:${REMOTE_PATH}"
-
-# Don't wipe a working remote GitHub token/owner when local values are empty.
-if [[ -z "$GITHUB_TOKEN" || -z "$GITHUB_OWNER" ]]; then
-  echo "Local githubToken/githubOwner missing — checking remote api/config.php..."
-  remote_config="${REMOTE_PATH%/}/api/config.php"
-  remote_creds="$(ssh "${SSH_OPTS[@]}" "$TARGET" "php -r '\$c=@include \"$remote_config\"; if(is_array(\$c)){echo (\$c[\"github_token\"]??\"\").chr(10).(\$c[\"github_owner\"]??\"\");}'" 2>/dev/null || true)"
-  if [[ -n "$remote_creds" ]]; then
-    remote_token="$(printf '%s\n' "$remote_creds" | sed -n '1p')"
-    remote_owner="$(printf '%s\n' "$remote_creds" | sed -n '2p')"
-    if [[ -z "$GITHUB_TOKEN" && -n "$remote_token" ]]; then
-      GITHUB_TOKEN="$remote_token"
-      echo "Preserved remote github_token"
-    fi
-    if [[ -z "$GITHUB_OWNER" && -n "$remote_owner" ]]; then
-      GITHUB_OWNER="$remote_owner"
-      echo "Preserved remote github_owner ($GITHUB_OWNER)"
-    fi
-  fi
-  if [[ -z "$GITHUB_TOKEN" ]]; then
-    echo "Warning: No GitHub token locally or on the server. Activity charts will have no live data until you set githubToken in deploy.config.json (or GITHUB_TOKEN) and redeploy." >&2
-  fi
-fi
 
 if [[ "$SKIP_BUILD" -eq 0 ]]; then
   echo "Installing dependencies..."
